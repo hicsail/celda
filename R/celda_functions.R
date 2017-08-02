@@ -39,7 +39,7 @@ normalizeLogProbs = function(ll.probs) {
 }
 
 
-#' Normalize a counts matrix by a scalar factor
+#' Normalize a counts matrix's columns by a scalar factor
 #' 
 #' @param counts A count matrix 
 #' @param scale.factor the scalar for the normalization 
