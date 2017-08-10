@@ -171,6 +171,12 @@ visualize.model$K
 
 Perplexity is a measure of goodness-of-fit for the model where lower perplexity is better. The perplexity of each chain can be visualized as a function of K. In this example, K=3 is much better than K=2, but K=4 does not give much improvement over K=3. We would therefore select K=3 in this case. Note: We are still actively testing various methods for assessing model performance. 
 
+We can also select a combination of K and L that suits the data by looking at silhouette width, a model-agnostic measure of how well the cluster assignments separate the data into discrete clusters:
+
+```{r silhouette width, fig.width = 8, fig.height = 7, message = FALSE}
+visualize_silhouette_widths(celda.res.list, counts=sim_counts$counts)
+```
+
 We can use the function "getModel" to select a particular model from the list of models once we have selected the optimal K and L.
 
 ```{r}

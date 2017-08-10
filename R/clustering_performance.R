@@ -140,6 +140,8 @@ visualize_silhouette_widths = function(celda.res, counts, normalize.counts=T,
             ggplot2::geom_point(position=ggplot2::position_jitter(width=0.1, height=0)) +
             ggplot2::xlab("K,L Combination") + 
             ggplot2::ylab("Average of Average K / L Silhouette Widths") + 
+            ggplot2::theme(axis.text.x=element_text(angle=90, hjust=1)) +
+            ggplot2::theme(axis.text.y=element_text(hjust=1)) +
             ggplot2::ggtitle(title) + ggplot2::theme_bw())
   } 
 }
