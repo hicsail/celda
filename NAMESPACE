@@ -68,3 +68,7 @@ import(graphics)
 import(grid)
 import(gtable)
 import(scales)
+
+useDynLib(celda)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)

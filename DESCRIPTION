@@ -9,6 +9,8 @@ Description: celda leverages Bayesian hierarchical modeling to cluster genes,
 Depends:
     R (>= 3.2.2)
 Imports:
+    Rcpp,
+    RcppArmadillo,
     plyr,
     dplyr,
     foreach,
@@ -42,6 +44,7 @@ Suggests:
     biomaRt,
     data.table,
     tsne
+LinkingTo: Rcpp
 VignetteBuilder: knitr
 License: MIT
 Encoding: UTF-8

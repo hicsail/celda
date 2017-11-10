@@ -142,39 +142,43 @@ cCG.calcLL = function(K, L, m.CP.by.S, n.CP.by.TS, n.by.G, n.by.TS, nG.by.TS, nS
   return(final)
 }
 
-cCG.calcGibbsProbZ = function(m.CP.by.S, n.CP.by.TS, n.CP, L, alpha, beta) {
+cCG.calcGibbsProbZ = celdaCGcalcGibbsProbZ
+  
+#   function(m.CP.by.S, n.CP.by.TS, n.CP, L, alpha, beta) {
+# 
+#   ## Calculate for "Theta" component
+#   theta.ll = log(m.CP.by.S + alpha)
+#   
+#   ## Calculate for "Phi" component
+# 
+#   b = sum(lgamma(n.CP.by.TS + beta))
+#   d = -sum(lgamma(n.CP + (L * beta)))
+#   
+#   phi.ll = b + d
+#   
+#   final = theta.ll + phi.ll 
+#   return(final)
+# }
 
-  ## Calculate for "Theta" component
-  theta.ll = log(m.CP.by.S + alpha)
+cCG.calcGibbsProbY = celdaCGcalcGibbsProbY
   
-  ## Calculate for "Phi" component
-
-  b = sum(lgamma(n.CP.by.TS + beta))
-  d = -sum(lgamma(n.CP + (L * beta)))
-  
-  phi.ll = b + d
-  
-  final = theta.ll + phi.ll 
-  return(final)
-}
-
-cCG.calcGibbsProbY = function(n.CP.by.TS, n.by.TS, nG.by.TS, nG.in.Y, beta, delta, gamma) {
-  
-  ## Calculate for "Phi" component
-  phi.ll = sum(lgamma(n.CP.by.TS + beta))
-  
-  ## Calculate for "Psi" component
-  a = sum(lgamma(nG.by.TS * delta))
-  d = -sum(lgamma(n.by.TS + (nG.by.TS * delta)))
-
-  psi.ll = a + d
-  
-  ## Calculate for "Eta" side
-  eta.ll = log(nG.in.Y + gamma)
-
-  final = phi.ll + psi.ll + eta.ll
-  return(final)
-}
+#   function(n.CP.by.TS, n.by.TS, nG.by.TS, nG.in.Y, beta, delta, gamma) {
+#   
+#   ## Calculate for "Phi" component
+#   phi.ll = sum(lgamma(n.CP.by.TS + beta))
+#   
+#   ## Calculate for "Psi" component
+#   a = sum(lgamma(nG.by.TS * delta))
+#   d = -sum(lgamma(n.by.TS + (nG.by.TS * delta)))
+# 
+#   psi.ll = a + d
+#   
+#   ## Calculate for "Eta" side
+#   eta.ll = log(nG.in.Y + gamma)
+# 
+#   final = phi.ll + psi.ll + eta.ll
+#   return(final)
+# }
 
 #' Simulate cells from the cell/gene clustering generative model
 #' 
@@ -358,7 +362,7 @@ celda_CG = function(counts, sample.label=NULL, K, L, alpha=1, beta=1,
         temp.n.CP = n.CP
         temp.n.CP[j] = temp.n.CP[j] + sum(counts[,i])
 
-        probs[j] = cCG.calcGibbsProbZ(m.CP.by.S=m.CP.by.S[j,s[i]], n.CP.by.TS=temp.n.CP.by.TS, n.CP=temp.n.CP, L=L, alpha=alpha, beta=beta)
+        probs[j] = cCG.calcGibbsProbZ(mCPbyS=m.CP.by.S[j,s[i]], nCPbyTS=temp.n.CP.by.TS, nCP=temp.n.CP, L=L, alpha=alpha, beta=beta)
       }  
     
       ## Sample next state and add back counts
@@ -410,10 +414,10 @@ celda_CG = function(counts, sample.label=NULL, K, L, alpha=1, beta=1,
         temp.nG.by.TS = nG.by.TS + (1 * ADD_PSEUDO)
         temp.nG.by.TS[j] = temp.nG.by.TS[j] + 1
 
-        probs[j] = cCG.calcGibbsProbY(n.CP.by.TS=temp.n.CP.by.TS,
-			n.by.TS=temp.n.by.TS,
-			nG.by.TS=temp.nG.by.TS,
-			nG.in.Y=temp.nG.by.TS[j],
+        probs[j] = cCG.calcGibbsProbY(nCPbyTS=temp.n.CP.by.TS,
+			nByTS=temp.n.by.TS,
+			nGbyTS=temp.nG.by.TS,
+			nGinY=temp.nG.by.TS[j],
 			beta=beta, delta=delta, gamma=gamma)
       }  
 
@@ -637,7 +641,7 @@ clusterProbability.celda_CG = function(counts, celda.mod) {
 	  temp.n.CP = n.CP
 	  temp.n.CP[j] = temp.n.CP[j] + sum(counts[,i])
 
-	  z.prob[i,j] = cCG.calcGibbsProbZ(m.CP.by.S=m.CP.by.S[j,s[i]], n.CP.by.TS=temp.n.CP.by.TS, n.CP=temp.n.CP, L=L, alpha=alpha, beta=beta)
+	  z.prob[i,j] = cCG.calcGibbsProbZ(mCPbyS=m.CP.by.S[j,s[i]], nCPbyTS=temp.n.CP.by.TS, n.CP=temp.n.CP, L=L, alpha=alpha, beta=beta)
 	}  
   
 	m.CP.by.S[z[i],s[i]] = m.CP.by.S[z[i],s[i]] + 1
@@ -667,10 +671,10 @@ clusterProbability.celda_CG = function(counts, celda.mod) {
 	  temp.nG.by.TS = nG.by.TS + (1 * ADD_PSEUDO)
 	  temp.nG.by.TS[j] = temp.nG.by.TS[j] + 1
 
-	  y.prob[i,j] = cCG.calcGibbsProbY(n.CP.by.TS=temp.n.CP.by.TS,
-		  n.by.TS=temp.n.by.TS,
-		  nG.by.TS=temp.nG.by.TS,
-		  nG.in.Y=temp.nG.by.TS[j],
+	  y.prob[i,j] = cCG.calcGibbsProbY(nCPbyTS=temp.n.CP.by.TS,
+		  nByTS=temp.n.by.TS,
+		  nGbyTS=temp.nG.by.TS,
+		  nGinY=temp.nG.by.TS[j],
 		  beta=beta, delta=delta, gamma=gamma)
 	}  
 
