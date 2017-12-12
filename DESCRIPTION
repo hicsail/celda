@@ -44,7 +44,7 @@ Suggests:
     biomaRt,
     data.table,
     tsne
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
 VignetteBuilder: knitr
 License: MIT
 Encoding: UTF-8
