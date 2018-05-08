@@ -399,7 +399,7 @@ clusterProbability.celda_C = function(celda.mod, counts, log=FALSE, ...) {
   beta = celda.mod$beta
   
   p = cC.decomposeCounts(counts, s, z, K)  
-  
+
   next.z = cC.calcGibbsProbZ(counts=counts, m.CP.by.S=p$m.CP.by.S, n.G.by.CP=p$n.G.by.CP, n.by.C=p$n.by.C, n.CP=p$n.CP, z=z, s=s, K=K, nG=p$nG, nM=p$nM, alpha=alpha, beta=beta, do.sample=FALSE)
   z.prob = t(next.z$probs)
   
