@@ -172,26 +172,26 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     n.CP[z[i]] = n.CP[z[i]] - n.by.C[i]
 
     # Calculate lgamma for every n.G.by.CP column
-    g_col_sums_vector = vector(length=K)
-    g_col_sums_vector <- apply(n.G.by.CP, MARGIN=2, function(column){return (sum(lgamma(column + beta)))})
-    g_sum = sum(g_col_sums_vector)
+    n.G.by.CP_gammas_vector = vector(length=K)
+    n.G.by.CP_gammas_vector <- apply(n.G.by.CP, MARGIN=2, function(column){return (sum(lgamma(column + beta)))})
+    n.G.by.CP_gammas_sum = sum(n.G.by.CP_gammas_vector)
 
     # Calculate lgamma for every n.CP element
-    g2_elements_vector = vector(length=K)
-    g2_elements_vector <- sapply(n.CP, function(element){return (lgamma(element + nG*beta))})
-    g2_sum = sum(g2_elements_vector)
+    n.CP_gammas_vector = vector(length=K)
+    n.CP_gammas_vector <- sapply(n.CP, function(element){return (lgamma(element + nG*beta))})
+    n.CP_gammas_sum = sum(n.CP_gammas_vector)
 
 
     for(j in 1:K) {
-      
-      new_col_g_sum = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j 
-      new_g_sum = g_sum - g_col_sums_vector[j] + new_col_g_sum # old sum - sum of old column + sum of new column
-      
-      new_g2_elememt = lgamma((n.CP[j] + n.by.C[i]) + (nG * beta)) # calculate new sum of ELEMENT j
-      new_g2_sum = g2_sum - g2_elements_vector[j] + new_g2_elememt # old sum - old element + new element
+
+      n.G.by.CP_new_col = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j
+      n.G.by.CP_gammas_new_sum = n.G.by.CP_gammas_sum - n.G.by.CP_gammas_vector[j] + n.G.by.CP_new_col # old sum - sum of old column + sum of new column
+
+      n.CP_new_element = lgamma((n.CP[j] + n.by.C[i]) + (nG * beta)) # calculate new sum of ELEMENT j
+      n.CP_gammas_new_sum = n.CP_gammas_sum -  n.CP_gammas_vector[j] + n.CP_new_element # old sum - old element + new element
 
       # theta simplified + phi numerator - phi denominator
-      probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum
+      probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + n.G.by.CP_gammas_new_sum - n.CP_gammas_new_sum
 
     }
     
