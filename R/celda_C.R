@@ -149,6 +149,15 @@ celda_C = function(counts, sample.label=NULL, K, alpha=1, beta=1,
   return(result)
 }
 
+# Helper functions to calcGibbsProbZ
+sum_lgamma_plus_param = function(column, param){
+  return (sum(lgamma(column + param)))
+}
+
+lgamma_plus_param = function(column, param){
+  return (lgamma(column + param))
+}
+
 
 # Gibbs sampling for the celda_C Model
 cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K, nG, nM, alpha, beta, do.sample=TRUE, random.state.order=TRUE) {
@@ -170,37 +179,32 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     m.CP.by.S[z[i],s[i]] = m.CP.by.S[z[i],s[i]] - 1L
     n.G.by.CP[,z[i]] = n.G.by.CP[,z[i]] - counts[,i]
     n.CP[z[i]] = n.CP[z[i]] - n.by.C[i]
-    
-    
-    g_col_sums_vector = vector(length=K) 
+
+    # Calculate lgamma for every n.G.by.CP column
+    g_col_sums_vector = vector(length=K)
+    g_col_sums_vector <- apply(n.G.by.CP, MARGIN=2, FUN=function(x) sum_lgamma_plus_param(x, beta))
+    g_sum = sum(g_col_sums_vector)
+
+    # Calculate lgamma for every n.CP element
     g2_elements_vector = vector(length=K)
+    g2_elements_vector <- sapply(n.CP, FUN=function(x) lgamma_plus_param(x, (nG*beta)))
+    g2_sum = sum(g2_elements_vector)
+
+
     for(j in 1:K) {
-      g_col_sums_vector[j] = sum(lgamma(n.G.by.CP[,j] + beta)) # Calculate lgamma for every column of n.G.by.CP
-      g2_elements_vector[j] = lgamma(n.CP[j] + (nG * beta)) # Calculate lgamma for every j element in n.CP
-    }
-    g_sum = sum(g_col_sums_vector) # sum of n.G.by.CP gammas
-    g2_sum = sum(g2_elements_vector) # sum of n.CP gammas
-    #g2_sum = sum(lgamma(n.CP + (nG * beta))) 
-    
-    for(j in 1:K) {
-      #temp.n.G.by.CP = n.G.by.CP
-      #temp.n.G.by.CP[,j] = temp.n.G.by.CP[,j] + counts[,i]
-      #temp.n.CP = n.CP
-      #temp.n.CP[j] = temp.n.CP[j] + n.by.C[i]
       
       new_col_g_sum = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j 
       new_g_sum = g_sum - g_col_sums_vector[j] + new_col_g_sum # old sum - sum of old column + sum of new column
       
       new_g2_elememt = lgamma((n.CP[j] + n.by.C[i]) + (nG * beta)) # calculate new sum of ELEMENT j
       new_g2_sum = g2_sum - g2_elements_vector[j] + new_g2_elememt # old sum - old element + new element
-      
+
+      # theta simplified + phi numerator - phi denominator
       probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum
-      # probs[j,i] = 	log(m.CP.by.S[j,s[i]] + alpha) +		## Theta simplified
-      #   sum(lgamma(temp.n.G.by.CP + beta)) -	## Phi Numerator
-      #   sum(lgamma(temp.n.CP + (nG * beta)))	## Phi Denominator
+
     }
     
-    ## Sample next state and add back counts
+    # Sample next state and add back counts
     if(isTRUE(do.sample)) z[i] = sample.ll(probs[,i])
     
     m.CP.by.S[z[i],s[i]] = m.CP.by.S[z[i],s[i]] + 1L
