@@ -149,15 +149,6 @@ celda_C = function(counts, sample.label=NULL, K, alpha=1, beta=1,
   return(result)
 }
 
-# Helper functions to calcGibbsProbZ
-sum_lgamma_plus_param = function(column, param){
-  return (sum(lgamma(column + param)))
-}
-
-lgamma_plus_param = function(column, param){
-  return (lgamma(column + param))
-}
-
 
 # Gibbs sampling for the celda_C Model
 cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K, nG, nM, alpha, beta, do.sample=TRUE, random.state.order=TRUE) {
@@ -182,12 +173,12 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
 
     # Calculate lgamma for every n.G.by.CP column
     g_col_sums_vector = vector(length=K)
-    g_col_sums_vector <- apply(n.G.by.CP, MARGIN=2, FUN=function(x) sum_lgamma_plus_param(x, beta))
+    g_col_sums_vector <- apply(n.G.by.CP, MARGIN=2, function(column){return (sum(lgamma(column + beta)))})
     g_sum = sum(g_col_sums_vector)
 
     # Calculate lgamma for every n.CP element
     g2_elements_vector = vector(length=K)
-    g2_elements_vector <- sapply(n.CP, FUN=function(x) lgamma_plus_param(x, (nG*beta)))
+    g2_elements_vector <- sapply(n.CP, function(element){return (lgamma(element + nG*beta))})
     g2_sum = sum(g2_elements_vector)
 
 
