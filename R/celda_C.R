@@ -170,17 +170,15 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     m.CP.by.S[z[i],s[i]] = m.CP.by.S[z[i],s[i]] - 1L
     n.G.by.CP[,z[i]] = n.G.by.CP[,z[i]] - counts[,i]
     n.CP[z[i]] = n.CP[z[i]] - n.by.C[i]
-
-    # Calculate lgamma for every n.G.by.CP column
+      
     n.G.by.CP_gammas_vector = vector(length=K)
-    n.G.by.CP_gammas_vector <- apply(n.G.by.CP, MARGIN=2, function(column){return (sum(lgamma(column + beta)))})
-    n.G.by.CP_gammas_sum = sum(n.G.by.CP_gammas_vector)
-
-    # Calculate lgamma for every n.CP element
     n.CP_gammas_vector = vector(length=K)
-    n.CP_gammas_vector <- sapply(n.CP, function(element){return (lgamma(element + nG*beta))})
-    n.CP_gammas_sum = sum(n.CP_gammas_vector)
-
+    for(j in 1:K) {
+      n.G.by.CP_gammas_vector[j] = sum(lgamma(n.G.by.CP[,j] + beta)) # Calculate lgamma for every column of n.G.by.CP
+      n.CP_gammas_vector[j] = lgamma(n.CP[j] + (nG * beta)) # Calculate lgamma for every j element in n.CP
+    }
+    n.G.by.CP_gammas_sum = sum(n.G.by.CP_gammas_vector) # sum of n.G.by.CP gammas
+    n.CP_gammas_sum  = sum(n.CP_gammas_vector) # sum of n.CP gammas
 
     for(j in 1:K) {
 
