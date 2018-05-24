@@ -53,13 +53,18 @@
 #' @param logfile The name of the logfile to redirect messages to.
 #' @param random.state.order Whether to sample genes / cells in a random order when performing Gibbs sampling. Defaults to TRUE.
 #' @export
+
+
 celda_CG = function(counts, sample.label=NULL, K, L,
                          alpha=1, beta=1, delta=1, gamma=1, 
                          stop.iter = 10, max.iter=200, split.on.iter=10, split.on.last=TRUE,
                          seed=12345, count.checksum=NULL,
                          z.init = NULL, y.init = NULL, process.counts=TRUE, logfile=NULL,
                          random.state.order=TRUE) {
-  
+
+
+
+
   ## Error checking and variable processing
   if (isTRUE(processCounts)) {
     counts = processCounts(counts)
@@ -78,7 +83,9 @@ celda_CG = function(counts, sample.label=NULL, K, L,
   z = initialize.cluster(K, ncol(counts), initial = z.init, fixed = NULL, seed=seed)
   y = initialize.cluster(L, nrow(counts), initial = y.init, fixed = NULL, seed=seed)
   z.best = z
-  y.best = y  
+  y.best = y
+
+
   
   ## Calculate counts one time up front
   p = cCG.decomposeCounts(counts, s, z, y, K, L)
@@ -317,7 +324,15 @@ factorizeMatrix.celda_CG = function(celda.mod, counts, type=c("counts", "proport
   gamma = celda.mod$gamma
   sample.label = celda.mod$sample.label
   s = processSampleLabels(sample.label, ncol(counts))
-  
+
+
+  prev_counts <<- counts
+  global_rowsum_counts <<- c(0,0);
+  global_rowsum_counts_is_set <<- FALSE;
+  global_colsum_counts <<- c(0,0);
+  global_colsum_counts_is_set <<- FALSE;
+
+
   ## Calculate counts one time up front
   p = cCG.decomposeCounts(counts, s, z, y, K, L)
   nS = p$nS
@@ -438,6 +453,7 @@ cCG.calcLL = function(K, L, m.CP.by.S, n.CP.by.TS, n.by.G, n.by.TS, nG.by.TS, nS
 }
 
 
+
 #' Calculate log lileklihood for the celda Cell and Gene clustering model, given a set of cell / gene cluster assignments
 #' 
 #' @param counts A numeric count matrix
@@ -452,7 +468,8 @@ cCG.calcLL = function(K, L, m.CP.by.S, n.CP.by.TS, n.by.G, n.by.TS, nG.by.TS, nS
 #' @param gamma The Dirichlet distribution parameter for Psi; adds a pseudocount to each gene within each transcriptional state.
 #' @param ... Additional parameters 
 #' @export
-calculateLoglikFromVariables.celda_CG = function(counts, sample.label, z, y, K, L, alpha, beta, delta, gamma) {  
+calculateLoglikFromVariables.celda_CG = function(counts, sample.label, z, y, K, L, alpha, beta, delta, gamma) {
+
   s = processSampleLabels(sample.label, ncol(counts))
   p = cCG.decomposeCounts(counts, s, z, y, K, L)
   final = cCG.calcLL(K=K, L=L, m.CP.by.S=p$m.CP.by.S, n.CP.by.TS=p$n.CP.by.TS, n.by.G=p$n.by.G, n.by.TS=p$n.by.TS, nG.by.TS=p$nG.by.TS, nS=p$nS, nG=p$nG, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
@@ -473,11 +490,42 @@ cCG.decomposeCounts = function(counts, s, z, y, K, L) {
   n.TS.by.C = rowsum.y(counts, y=y, L=L)
   n.CP.by.TS = rowsum.z(n.TS.by.C, z=z, K=K)
   n.CP = as.integer(rowSums(n.CP.by.TS))
-  n.by.G = as.integer(rowSums(counts))
-  n.by.C = as.integer(colSums(counts))
+
+  #n.by.G = as.integer(rowSums(counts))
+  if (global_rowsum_counts_is_set)
+  {
+    n.by.G = global_rowsum_counts;
+  }
+  else
+  {
+    n.by.G = as.integer(rowSums(counts))
+    global_rowsum_counts <<- as.integer(rowSums(counts))
+    global_rowsum_counts_is_set <<- TRUE
+  }
+
+
+  #n.by.C = as.integer(colSums(counts))
+  if (global_colsum_counts_is_set)
+  {
+    n.by.C = global_colsum_counts;
+  }
+  else
+  {
+    n.by.C = as.integer(colSums(counts))
+    global_colsum_counts <<- as.integer(colSums(counts))
+    global_colsum_counts_is_set <<- TRUE
+  }
+
+
   n.by.TS = as.integer(rowsum.y(matrix(n.by.G,ncol=1), y=y, L=L))
   nG.by.TS = as.integer(table(factor(y, 1:L)))
   n.CP.by.G = rowsum.z(counts, z=z, K=K)
+
+  # Test if count changes between iterations
+  # print(dim(counts))
+  # print(dim(prev_counts))
+  # diff = counts - prev_counts;
+  # print(max(diff))
   
   nG = nrow(counts)
   nM = ncol(counts)
@@ -495,32 +543,32 @@ cCG.decomposeCounts = function(counts, s, z, y, K, L) {
 #' @return A list containging a matrix for the conditional cell cluster probabilities. 
 #' @export
 clusterProbability.celda_CG = function(celda.mod, counts, log=FALSE, ...) {
-  
+
   s = processSampleLabels(celda.mod$sample.label, ncol(counts))
   z = celda.mod$z
-  K = celda.mod$K  
+  K = celda.mod$K
   y = celda.mod$y
   L = celda.mod$L
   alpha = celda.mod$alpha
   delta = celda.mod$delta
   beta = celda.mod$beta
   gamma = celda.mod$gamma
-  
+
   p = cCG.decomposeCounts(counts, s, z, y, K, L)
-  
+
   ## Gibbs sampling for each cell
   next.z = cC.calcGibbsProbZ(counts=p$n.TS.by.C, m.CP.by.S=p$m.CP.by.S, n.G.by.CP=t(p$n.CP.by.TS), n.CP=p$n.CP, n.by.C=p$n.by.C, z=z, s=s, K=K, nG=L, nM=p$nM, alpha=alpha, beta=beta, do.sample=FALSE)
   z.prob = t(next.z$probs)
-  
+
   ## Gibbs sampling for each gene
   next.y = cG.calcGibbsProbY(counts.t=p$n.CP.by.G, n.C.by.TS=p$n.CP.by.TS, n.by.TS=p$n.by.TS, nG.by.TS=p$nG.by.TS, n.by.G=p$n.by.G, y=y, L=L, nG=nG, beta=beta, delta=delta, gamma=gamma, do.sample=FALSE)
   y.prob = t(next.y$probs)
-  
+
   if(!isTRUE(log)) {
     z.prob = normalizeLogProbs(z.prob)
     y.prob = normalizeLogProbs(y.prob)
   }
-  
+
   return(list(z.probability=z.prob, y.probability=y.prob))
 }
 
