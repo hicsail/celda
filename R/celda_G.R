@@ -167,9 +167,6 @@ cG.calcGibbsProbY = function(counts.t, n.C.by.TS, n.by.TS, nG.by.TS, n.by.G, y, 
   
   ## Set variables up front outside of loop
   probs = matrix(NA, ncol=nG, nrow=L)
-  #temp.nG.by.TS = nG.by.TS 
-  #temp.n.by.TS = n.by.TS 
-  #temp.n.C.by.TS = n.C.by.TS
   lgamma_of_delta = lgamma(delta)
   
   if(isTRUE(random.state.order)){
@@ -201,29 +198,7 @@ cG.calcGibbsProbY = function(counts.t, n.C.by.TS, n.by.TS, nG.by.TS, n.by.G, y, 
 
     ## Calculate probabilities for each state
     for(j in 1:L) {
-      
-      # temp.nG.by.TS = nG.by.TS
-      # temp.n.by.TS = n.by.TS
-      # temp.n.C.by.TS = n.C.by.TS
-      # 
-      # temp.nG.by.TS[j] = temp.nG.by.TS[j] + 1L
-      # temp.n.by.TS[j] = temp.n.by.TS[j] + n.by.G[i]
-      # temp.n.C.by.TS[,j] = temp.n.C.by.TS[,j] + counts.t[,i]
-      # 
-      # pseudo.nG.by.TS = temp.nG.by.TS
-      # pseudo.nG.by.TS[temp.nG.by.TS == 0L] = 1L
-      # pseudo.nG = sum(pseudo.nG.by.TS)
-      # 
-      # print(lgamma(sum(pseudo.nG.by.TS + gamma)))
-      # print(sum(lgamma(sum(pseudo.nG.by.TS + gamma))))
-      # 
-      # probs[j,i] <- 	sum(lgamma(pseudo.nG.by.TS + gamma)) -
-      #   sum(lgamma(sum(pseudo.nG.by.TS + gamma))) +
-      #   sum(lgamma(temp.n.C.by.TS + beta)) +
-      #   sum(lgamma(pseudo.nG.by.TS * delta)) -
-      #   (pseudo.nG * lgamma(delta)) -
-      #   sum(lgamma(temp.n.by.TS + (pseudo.nG.by.TS * delta)))
-      
+
       #1 sum(lgamma(pseudo.nG.by.TS + gamma))
       old_nG.by.TS_gamma = lgamma(dev.nG.by.TS[j] + gamma)
       new_nG.by.TS_gamma = lgamma(nG.by.TS[j] + 1L + gamma)
@@ -462,7 +437,7 @@ cG.calcLL = function(n.C.by.TS, n.by.TS, n.by.G, nG.by.TS, nM, nG, L, beta, delt
 #' @return The log likelihood of the provided cluster assignment, as calculated by the celda_G likelihood function
 #' @export
 calculateLoglikFromVariables.celda_G = function(counts, y, L, beta, delta, gamma) {
-  
+  print('calculateLogLike From Variables celda G')
   p = cG.decomposeCounts(counts=counts, y=y, L=L)
   final <- cG.calcLL(n.C.by.TS=p$n.C.by.TS, n.by.TS=p$n.by.TS, n.by.G=p$n.by.G, nG.by.TS=p$nG.by.TS, nM=p$nM, nG=p$nG, L=L, beta=beta, delta=delta, gamma=gamma)
   

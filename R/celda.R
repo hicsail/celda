@@ -32,6 +32,7 @@ available_models = c("celda_C", "celda_G", "celda_CG")
 #' @return Object of class "celda_list", which contains results for all model parameter combinations and summaries of the run parameters
 #' @import foreach
 #' @export
+
 celda = function(counts, model, sample.label=NULL, K=NULL, L=NULL, alpha=1, beta=1, 
                  delta=1, gamma=1, max.iter=200, z.init=NULL, y.init=NULL,
                  stop.iter=10, split.on.iter=10, process.counts=FALSE, 

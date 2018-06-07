@@ -152,7 +152,8 @@ celda_CG = function(counts, sample.label=NULL, K, L,
       n.CP.by.TS = rowsum.z(n.TS.by.C, z=z, K=K)
       n.CP = as.integer(rowSums(n.CP.by.TS))
       n.CP.by.G = rowsum.z(counts, z=z, K=K)     
-    }  
+    }
+
     if(L > 2 & (((iter == max.iter | num.iter.without.improvement == stop.iter) & isTRUE(split.on.last)) | (iter %% split.on.iter == 0 & isTRUE(do.gene.split)))) {
       #logMessages(date(), " ... Determining if any gene clusters should be split.", logfile=logfile, append=TRUE, sep="")
       res = split.each.y(counts=counts, z=z, y=y, y.prob=t(next.y$probs), K=K, L=L, alpha=alpha, beta=beta, delta=delta, gamma=gamma, s=s, LLFunction="calculateLoglikFromVariables.celda_CG")
