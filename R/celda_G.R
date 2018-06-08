@@ -72,6 +72,16 @@ celda_G = function(counts, L, beta=1, delta=1, gamma=1,
   y = initialize.cluster(L, nrow(counts), initial = y.init, fixed = NULL, seed=seed)
   y.best = y  
   
+  # Global variables for decomposeCounts
+  previousY <<- integer(length(y))
+  yChanged <<- TRUE
+  #global_m.CP.by.S <<- matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=length(unique(s)))
+  global_n.C.by.TS <<- 0
+  global_n.by.G <<- 0
+  global_n.by.TS <<- 0
+  global_nG.by.TS <<- 0
+  globalFlag <<- FALSE
+  
   ## Calculate counts one time up front
   p = cG.decomposeCounts(counts=counts, y=y, L=L)
   n.C.by.TS = p$n.C.by.TS
@@ -167,6 +177,9 @@ cG.calcGibbsProbY = function(counts.t, n.C.by.TS, n.by.TS, nG.by.TS, n.by.G, y, 
   
   ## Set variables up front outside of loop
   probs = matrix(NA, ncol=nG, nrow=L)
+  #temp.nG.by.TS = nG.by.TS
+  #temp.n.by.TS = n.by.TS
+  #temp.n.C.by.TS = n.C.by.TS
   lgamma_of_delta = lgamma(delta)
   
   if(isTRUE(random.state.order)){
@@ -198,6 +211,26 @@ cG.calcGibbsProbY = function(counts.t, n.C.by.TS, n.by.TS, nG.by.TS, n.by.G, y, 
 
     ## Calculate probabilities for each state
     for(j in 1:L) {
+      
+      # temp.nG.by.TS = nG.by.TS
+      # temp.n.by.TS = n.by.TS
+      # temp.n.C.by.TS = n.C.by.TS
+      # 
+      # temp.nG.by.TS[j] = temp.nG.by.TS[j] + 1L
+      # temp.n.by.TS[j] = temp.n.by.TS[j] + n.by.G[i]
+      # temp.n.C.by.TS[,j] = temp.n.C.by.TS[,j] + counts.t[,i]
+      # 
+      # pseudo.nG.by.TS = temp.nG.by.TS
+      # pseudo.nG.by.TS[temp.nG.by.TS == 0L] = 1L
+      # pseudo.nG = sum(pseudo.nG.by.TS)
+      # 
+      # probs[j,i] <- 	sum(lgamma(pseudo.nG.by.TS + gamma)) -
+      #   sum(lgamma(sum(pseudo.nG.by.TS + gamma))) +
+      #   sum(lgamma(temp.n.C.by.TS + beta)) +
+      #   sum(lgamma(pseudo.nG.by.TS * delta)) -
+      #   (pseudo.nG * lgamma(delta)) -
+      #   sum(lgamma(temp.n.by.TS + (pseudo.nG.by.TS * delta)))
+      
 
       #1 sum(lgamma(pseudo.nG.by.TS + gamma))
       old_nG.by.TS_gamma = lgamma(dev.nG.by.TS[j] + gamma)
@@ -263,6 +296,8 @@ cG.calcGibbsProbY = function(counts.t, n.C.by.TS, n.by.TS, nG.by.TS, n.by.G, y, 
 #' @export
 simulateCells.celda_G = function(model, C=100, N.Range=c(500,5000),  G=1000, 
                                  L=5, beta=1, gamma=1, delta=1, seed=12345, ...) {
+  
+  simCellsFlag <<-TRUE
   set.seed(seed)
   eta = rdirichlet(1, rep(gamma, L))
   
@@ -312,6 +347,7 @@ simulateCells.celda_G = function(model, C=100, N.Range=c(500,5000),  G=1000,
   class(result) = "celda_G" 
   result = reorder.celda_G(counts = cell.counts, res = result)  
   
+  simCellsFlag <<-FALSE
   return(list(y=result$y, counts=cell.counts, L=L, beta=beta, delta=delta, gamma=gamma, phi=phi, psi=psi, eta=eta, seed=seed))
 }
 
@@ -450,13 +486,35 @@ calculateLoglikFromVariables.celda_G = function(counts, y, L, beta, delta, gamma
 #' @param y A numeric vector of gene cluster assignments
 #' @param L The number of clusters being considered
 cG.decomposeCounts = function(counts, y, L) {
-  
-  n.C.by.TS = t(rowsum.y(counts, y=y, L=L))
-  n.by.G = as.integer(rowSums(counts))
-  n.by.TS = as.integer(rowsum.y(matrix(n.by.G,ncol=1), y=y, L=L))
-  nG.by.TS = as.integer(table(factor(y, 1:L)))
-  nM = ncol(counts)
-  nG = nrow(counts)
+  if(simCellsFlag){
+    n.C.by.TS = t(rowsum.y(counts, y=y, L=L))
+    n.by.G = as.integer(rowSums(counts))
+    n.by.TS = as.integer(rowsum.y(matrix(n.by.G,ncol=1), y=y, L=L))
+    nG.by.TS = as.integer(table(factor(y, 1:L)))
+    nM = ncol(counts)
+    nG = nrow(counts)
+  }else{
+    yChanged <<- if(identical(previousY, y)) FALSE else TRUE
+    previousY <<- y 
+    if(!globalFlag){
+      global_nG <<- nrow(counts)
+      global_nM <<- ncol(counts)
+      global_n.by.G <<- as.integer(rowSums(counts))
+      globalFlag = TRUE
+    }
+    n.by.G = global_n.by.G
+    nM = global_nM
+    nG = global_nG
+    
+    if(yChanged){
+      global_n.C.by.TS = t(rowsum.y(counts, y=y, L=L))
+      global_n.by.TS = as.integer(rowsum.y(matrix(n.by.G,ncol=1), y=y, L=L))
+      global_nG.by.TS = as.integer(table(factor(y, 1:L)))
+    }
+    n.C.by.TS = global_n.C.by.TS
+    n.by.TS = global_n.by.TS
+    nG.by.TS = global_nG.by.TS
+  }
   
   return(list(n.C.by.TS=n.C.by.TS, n.by.G=n.by.G, n.by.TS=n.by.TS, nG.by.TS=nG.by.TS, nM=nM, nG=nG))
 }

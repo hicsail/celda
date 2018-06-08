@@ -71,6 +71,21 @@ celda_C = function(counts, sample.label=NULL, K, alpha=1, beta=1,
   z = initialize.cluster(K, ncol(counts), initial = z.init, fixed = NULL, seed=seed)
   z.best = z
   
+  # Global variables for decomposeCounts
+  previousZ <<- integer(length(z)) # vector of 0s
+  previousS <<- 0
+  zChanged <<- TRUE
+  sChanged <<- TRUE 
+  global_nS <<- 0
+  global_nG <<- 0
+  global_nM <<- 0
+  global_m.CP.by.S <<- matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=length(unique(s)))
+  global_n.G.by.CP <<- 0
+  global_n.CP <<- 0
+  global_n.by.C <<- 0
+  globalFlag <<- FALSE
+  simCellsFlag <<- FALSE
+  
   ## Calculate counts one time up front
   p = cC.decomposeCounts(counts, s, z, K)
   nS = p$nS
@@ -154,6 +169,9 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
 
   ## Set variables up front outside of loop  
   probs = matrix(NA, ncol=nM, nrow=K)
+  #temp.n.G.by.CP = n.G.by.CP
+  #temp.n.CP = n.CP
+
   
   if(isTRUE(random.state.order)) {
     ix = sample(1:nM)
@@ -161,14 +179,9 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     ix = rev(1:nM)
   }
 
-  cores=detectCores()
-  cl <- makeCluster(ix/10)
-  registerDoParallel(cl)
 
-  foreach(i:ix, .combine='c') %dopar% {
-
-  #for(i in ix) {
-
+  #start_time = Sys.time()
+  for(i in ix) {
     ## Subtract current cell counts from matrices
     m.CP.by.S[z[i],s[i]] = m.CP.by.S[z[i],s[i]] - 1L
     n.G.by.CP[,z[i]] = n.G.by.CP[,z[i]] - counts[,i]
@@ -182,19 +195,23 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     }
     g_sum = sum(g_col_sums_vector) # sum of n.G.by.CP gammas
     g2_sum = sum(g2_elements_vector) # sum of n.CP gammas
-
- 
+    
     for(j in 1:K) {
     #probs[,i] = foreach(j=1:K, .combine='c') %dopar% {
+      # temp.n.G.by.CP = n.G.by.CP
+      # temp.n.G.by.CP[,j] = temp.n.G.by.CP[,j] + counts[,i]
+      # temp.n.CP = n.CP
+      # temp.n.CP[j] = temp.n.CP[j] + n.by.C[i]
+      # 
+      # probs[j,i] = 	log(m.CP.by.S[j,s[i]] + alpha) +		## Theta simplified
+      #   sum(lgamma(temp.n.G.by.CP + beta)) -	## Phi Numerator
+      #   sum(lgamma(temp.n.CP + (nG * beta)))	## Phi Denominator
+      
+      new_col_g_sum = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j
+      new_g_sum = g_sum - g_col_sums_vector[j] + new_col_g_sum # old sum - sum of old column + sum of new column
 
-        new_col_g_sum = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j
-        new_g_sum = g_sum - g_col_sums_vector[j] + new_col_g_sum  # old sum - sum of old column + sum of new column
-  
-        new_g2_elememt = lgamma((n.CP[j] + n.by.C[i]) + (nG * beta)) # calculate new sum of ELEMENT j
-        new_g2_sum = g2_sum - g2_elements_vector[j] + new_g2_elememt # old sum - old element + new element
-  
-        probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum
-       #log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum #for dopar
+      probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum
+      #log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum #for dopar
     }
 
 
@@ -206,7 +223,8 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
     n.CP[z[i]] = n.CP[z[i]] + n.by.C[i]
   }
 
-
+  # end_time = Sys.time()
+  # print(end_time - start_time)
 
   return(list(m.CP.by.S=m.CP.by.S, n.G.by.CP=n.G.by.CP, n.CP=n.CP, z=z, probs=probs))
 }
@@ -228,6 +246,7 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
 simulateCells.celda_C = function(model, S=10, C.Range=c(10, 100), N.Range=c(100,5000), 
                                  G=500, K=5, alpha=1, beta=1, seed=12345, ...) {
   
+  simCellsFlag <<- TRUE
   set.seed(seed) 
   
   phi <- rdirichlet(K, rep(beta, G))
@@ -261,6 +280,7 @@ simulateCells.celda_C = function(model, S=10, C.Range=c(10, 100), N.Range=c(100,
   class(result) = "celda_C" 
   result = reorder.celda_C(counts = cell.counts, res = result)
   
+  simCellsFlag <<-FALSE
   return(list(z=result$z, counts=cell.counts, sample.label=cell.sample.label, K=K, alpha=alpha, beta=beta, C.Range=C.Range, N.Range=N.Range, S=S))
 }
 
@@ -368,14 +388,48 @@ calculateLoglikFromVariables.celda_C = function(counts, sample.label, z, K, alph
 #' @param z A numeric vector of cluster assignments
 #' @param K The total number of clusters in z
 cC.decomposeCounts = function(counts, s, z, K) {
-  nS = length(unique(s))
-  nG = nrow(counts)
-  nM = ncol(counts)
-  
-  m.CP.by.S = matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=nS)
-  n.G.by.CP = t(rowsum.z(counts, z=z, K=K))
-  n.CP = as.integer(colSums(n.G.by.CP))
-  n.by.C = as.integer(colSums(counts))
+  if(simCellsFlag){
+    nS = length(unique(s))
+    nG = nrow(counts)
+    nM = ncol(counts)
+    
+    m.CP.by.S = matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=nS)
+    n.G.by.CP = t(rowsum.z(counts, z=z, K=K))
+    n.CP = as.integer(colSums(n.G.by.CP))
+    n.by.C = as.integer(colSums(counts))
+  }else{
+    zChanged <<- if(identical(previousZ, z)) FALSE else TRUE
+    previousZ <<- z
+    sChanged <<- if(identical(previousS, s)) FALSE else TRUE
+    previousS <<- s
+    
+    if(!globalFlag){
+      global_n.by.C <<- as.integer(colSums(counts))
+      global_nG <<- nrow(counts)
+      global_nM <<- ncol(counts)
+      globalFlag = TRUE
+    }
+    n.by.C = global_n.by.C
+    nG = global_nG 
+    nM = global_nM 
+    
+    if(sChanged){
+      global_nS <<- length(unique(s))
+    }
+    nS = global_nS
+    
+    if(zChanged || sChanged){
+      global_m.CP.by.S <<- matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=nS)
+    }
+    m.CP.by.S = global_m.CP.by.S
+    
+    if(zChanged){
+      global_n.G.by.CP = t(rowsum.z(counts, z=z, K=K))
+      global_n.CP = as.integer(colSums(global_n.G.by.CP))
+    }
+    n.G.by.CP = global_n.G.by.CP
+    n.CP = global_n.CP
+  }
   
   return(list(m.CP.by.S=m.CP.by.S, n.G.by.CP=n.G.by.CP, n.CP=n.CP, n.by.C=n.by.C, nS=nS, nG=nG, nM=nM))
 }
@@ -480,5 +534,3 @@ getL.celda_C = function(celda.mod) { return(NA) }
 celdaHeatmap.celda_C = function(celda.mod, counts, ...) {
   renderCeldaHeatmap(counts, z=celda.mod$z, ...)
 }
-
-
