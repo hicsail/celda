@@ -117,6 +117,13 @@ celda_CG = function(counts, sample.label=NULL, K, L,
   globalFlag <<- FALSE
   simCellsFlag <<- FALSE
 
+  prev_counts <<- counts
+  global_rowsum_counts <<- c(0,0);
+  global_rowsum_counts_is_set <<- FALSE;
+  global_colsum_counts <<- c(0,0);
+  global_colsum_counts_is_set <<- FALSE;
+
+
   ## Calculate counts one time up front
   p = cCG.decomposeCounts(counts, s, z, y, K, L)
   m.CP.by.S = p$m.CP.by.S

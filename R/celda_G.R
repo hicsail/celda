@@ -81,6 +81,7 @@ celda_G = function(counts, L, beta=1, delta=1, gamma=1,
   global_n.by.TS <<- 0
   global_nG.by.TS <<- 0
   globalFlag <<- FALSE
+  simCellsFlag <<- FALSE
   
   ## Calculate counts one time up front
   p = cG.decomposeCounts(counts=counts, y=y, L=L)

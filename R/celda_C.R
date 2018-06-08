@@ -52,7 +52,8 @@ celda_C = function(counts, sample.label=NULL, K, alpha=1, beta=1,
                         stop.iter = 10, max.iter=200, split.on.iter=10, split.on.last=TRUE,
                         random.state.order=TRUE, count.checksum=NULL, seed=12345,
                         z.init = NULL, process.counts=TRUE, logfile=NULL) {
-  
+
+
   ## Error checking and variable processing
   if (isTRUE(process.counts)) {
     counts = processCounts(counts)  
@@ -80,7 +81,7 @@ celda_C = function(counts, sample.label=NULL, K, alpha=1, beta=1,
   global_nG <<- 0
   global_nM <<- 0
   global_m.CP.by.S <<- matrix(as.integer(table(factor(z, levels=1:K), s)), ncol=length(unique(s)))
-  global_n.G.by.CP <<- 0
+  global_n.G.by.CP <<- matrix(, nrow=1, ncol=1) #TODO 0
   global_n.CP <<- 0
   global_n.by.C <<- 0
   globalFlag <<- FALSE
@@ -209,6 +210,9 @@ cC.calcGibbsProbZ = function(counts, m.CP.by.S, n.G.by.CP, n.by.C, n.CP, z, s, K
       
       new_col_g_sum = sum(lgamma((n.G.by.CP[,j] + counts[,i]) + beta)) # calculate new sum of COLUMN j
       new_g_sum = g_sum - g_col_sums_vector[j] + new_col_g_sum # old sum - sum of old column + sum of new column
+
+      new_g2_elememt = lgamma((n.CP[j] + n.by.C[i]) + (nG * beta)) # calculate new sum of ELEMENT j
+      new_g2_sum = g2_sum - g2_elements_vector[j] + new_g2_elememt # old sum - old element + new element
 
       probs[j,i] = log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum
       #log(m.CP.by.S[j,s[i]] + alpha) + new_g_sum - new_g2_sum #for dopar
@@ -374,7 +378,6 @@ cC.calcLL = function(m.CP.by.S, n.G.by.CP, s, z, K, nS, nG, alpha, beta) {
 #' @param ... Additional parameters
 #' @export
 calculateLoglikFromVariables.celda_C = function(counts, sample.label, z, K, alpha, beta) {
-  print('called LogLikeFromVariables celda C')
   s = processSampleLabels(sample.label, ncol(counts))
   p = cC.decomposeCounts(counts, s, z, K)  
   final = cC.calcLL(m.CP.by.S=p$m.CP.by.S, n.G.by.CP=p$n.G.by.CP, s=s, z=z, K=K, nS=p$nS, nG=p$nG, alpha=alpha, beta=beta)
@@ -388,6 +391,7 @@ calculateLoglikFromVariables.celda_C = function(counts, sample.label, z, K, alph
 #' @param z A numeric vector of cluster assignments
 #' @param K The total number of clusters in z
 cC.decomposeCounts = function(counts, s, z, K) {
+
   if(simCellsFlag){
     nS = length(unique(s))
     nG = nrow(counts)
