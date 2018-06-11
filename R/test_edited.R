@@ -12,19 +12,14 @@ source('celda_CG.R')
 source('split_clusters.R')
 source('s3_generics.R')
 library(doParallel)
-#library(parallel)
-#source("https://bioconductor.org/biocLite.R")
-#biocLite("BiocParallel")
-#library("BiocParallel")
-#library(celda)
-#library(hashmap)
+
 
 main = function(){
     #time_celda();
     #time_celda_CG_simCells();
-    time_celda_CG();
+    #time_celda_CG();
     #time_celda_C();
-    #time_celda_G();
+    time_celda_G();
 }
 
 
@@ -98,7 +93,7 @@ time_celda_C = function(){
     print('Dimensions - simulateCells.celda_C()')
     print(dim(sim_counts_C$counts))
 
-    print('EDITED - with parApply')
+    print('EDITED')
     print(system.time(celda_C(counts = sim_counts_C$counts,
         sample.label=NULL, K = 5, alpha=1, beta=1,
         stop.iter = 10, max.iter=15, split.on.iter=10, split.on.last=TRUE,
